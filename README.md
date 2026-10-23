@@ -60,10 +60,9 @@ fake ADMIN user locally so you can hit endpoints. Never in production.
 4. → Authentication → Providers: leave Email on, **disable sign-ups**
    (Turn off "Allow new users to sign up" in Auth settings).
 5. Verify JWKS exists: `https://<ref>.supabase.co/auth/v1/.well-known/jwks.json`.
-6. Create your first ADMIN user **via Supabase dashboard auth users** — no, wait: keep open
-   sign-up off; create the first admin with the seed SQL: run the admin-create API route
-   (`POST /api/v1/admin/users`) once `SUPABASE_SERVICE_ROLE_KEY` is set, or create a user
-   in dashboard and `PATCH` its app_metadata to `{ "role": "ADMIN" }`.
+6. First ADMIN account: follow **`docs/supabase-setup.md` Step 6** — a one-time
+   `POST /api/v1/admin/users` call with `DEV_BYPASS_AUTH=true` (it also explains the
+   SQL fallback). Presidents are then created from the SPA admin panel.
 
 ## Deploy checklist
 
