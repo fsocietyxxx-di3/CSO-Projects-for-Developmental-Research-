@@ -41,7 +41,7 @@ function verifyWithJwks(token: string): Promise<jwt.JwtPayload> {
           callback(null, key.getPublicKey());
         });
       },
-      { algorithms: ["RS256"] },
+      { algorithms: ["RS256", "ES256"] },
       (err, decoded) => (err ? reject(err) : resolve(decoded as jwt.JwtPayload)),
     );
   });
