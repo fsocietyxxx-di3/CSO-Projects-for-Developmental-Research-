@@ -1,0 +1,33 @@
+# Render Blueprint — deploys the Express REST API as a free web service.
+# Create via Render Dashboard → Blueprints → New Blueprint Instance → connect this repo.
+# Fill the sync:false vars after the first sync (Dashboard → Environment).
+services:
+  - type: web
+    name: cso-registry-api
+    runtime: node
+    plan: free
+    region: singapore
+    branch: main
+    buildCommand: npm install && npm run prisma:generate -w apps/api
+    startCommand: npm run start -w apps/api
+    healthCheckPath: /api/v1/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 4000
+      - key: DATABASE_URL
+        sync: false          # Supabase Postgres connection string (Session pooler)
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_JWKS_URL
+        sync: false          # optional — defaults to {SUPABASE_URL}/auth/v1/.well-known/jwks.json
+      - key: SUPABASE_JWT_SECRET
+        sync: false          # optional — only for legacy HS256 projects
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false          # required only for the admin "create president account" route
+      - key: CORS_ORIGINS
+        value: http://localhost:5173
+      - key: DEV_BYPASS_AUTH
+        value: "false"

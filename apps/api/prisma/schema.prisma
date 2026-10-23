@@ -1,0 +1,151 @@
+// Prisma schema — CSO Management & Member Registry System
+// Deployment: Supabase Postgres (free tier). See docs/supabase-setup.md.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN      // CSO Desk
+  PRESIDENT  // CSO/NGO president — encodes own members (RA 10173: consent lives with the org)
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum MembershipStatus {
+  ACTIVE
+  PENDING
+  CLEARED
+}
+
+enum AccreditationStatus {
+  PENDING
+  ACCREDITED
+  RENEWAL_DUE
+  LAPSED
+}
+
+/// App-level user linked to a Supabase Auth user (authId = JWT `sub`).
+/// Role lives in app_metadata on the auth side AND here; the API always re-checks
+/// app_metadata (never user_metadata, which users can edit themselves).
+model User {
+  id             String        @id @default(uuid())
+  authId         String        @unique
+  email          String        @unique
+  name           String
+  role           Role
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  recordedAssistances Assistance[] @relation("RecordedBy")
+  auditLogs      AuditLog[]
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+}
+
+/// A CSO/NGO registered with the CSO Desk.
+model Organization {
+  id                     String             @id @default(uuid())
+  name                   String             @unique
+  type                   String?            // NGO, federation, foundation…
+  about                  String?
+  barangay               String?
+  accreditationStatus    AccreditationStatus @default(PENDING)
+  accreditationValidUntil DateTime?
+  allotment              Int                @default(20) // per-NGO assistance slots
+  users                  User[]
+  memberships            Membership[]
+  assistances            Assistance[]
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+
+  @@index([barangay])
+}
+
+/// A person record is GLOBAL (not per-org). One person = one Member row;
+/// memberships tie them to organizations. Duplicate detection matches on
+/// name+birthdate+barangay — never name alone (same surname ≠ same person).
+model Member {
+  id              String       @id @default(uuid())
+  firstName       String
+  lastName        String
+  middleName      String?
+  birthdate       DateTime
+  gender          Gender
+  address         String
+  barangay        String
+  householdId     String?      // groups a family together (helps catch family-wide duplicates)
+  consentAccepted Boolean      @default(false) // RA 10173 — recorded at encode time
+  memberships     Membership[]
+  assistances     Assistance[]
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  @@index([lastName, firstName])
+  @@index([birthdate])
+}
+
+/// Member ↔ Organization row. Adding a second membership for an existing member
+/// is expected (that's how cross-org membership is expressed), but joining the
+/// SAME org twice is forbidden.
+model Membership {
+  id             String           @id @default(uuid())
+  memberId       String
+  member         Member           @relation(fields: [memberId], references: [id])
+  organizationId String
+  organization   Organization     @relation(fields: [organizationId], references: [id])
+  role           String?          // President, Secretary, Member…
+  status         MembershipStatus @default(ACTIVE)
+  goodStanding   StandingStatus?  // verified standing, e.g. from previous org clearance
+  joinedAt       DateTime         @default(now())
+  endedAt        DateTime?
+
+  @@unique([memberId, organizationId])
+  @@index([organizationId, status])
+}
+
+enum StandingStatus {
+  GOOD_STANDING
+  WITH_CASES
+  PENDING_CLEARANCE
+}
+
+/// The ayuda ledger — the safeguard against duplicate assistance.
+model Assistance {
+  id               String       @id @default(uuid())
+  memberId         String
+  member           Member       @relation(fields: [memberId], references: [id])
+  organizationId   String
+  organization     Organization @relation(fields: [organizationId], references: [id])
+  type             String       // AYUDA, MEDICAL, BURIAL, EDUCATION…
+  items            String?      // rice + kaldero, etc.
+  amount           Float?
+  receivedAt       DateTime     @default(now())
+  recordedByUserId String?
+  recordedBy       User?        @relation("RecordedBy", fields: [recordedByUserId], references: [id])
+  createdAt        DateTime     @default(now())
+
+  @@index([memberId, receivedAt])
+  @@index([organizationId, receivedAt])
+}
+
+/// Who did what — Sprint 5 makes the UI/lens around this, the hook writes now.
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  action    String   // e.g. ORG_CREATE, USER_CREATE, MEMBER_ENCODE
+  entity    String?
+  meta      Json?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}

@@ -1,0 +1,24 @@
+node_modules/
+dist/
+dist-ssr/
+coverage/
+
+# env files — never commit real keys
+.env
+.env.local
+.env.*.local
+*.pem
+
+prisma/dev.db
+*.db
+
+# generated
+*.tsbuildinfo
+.vercel
+.vite/
+
+# logs & OS
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
