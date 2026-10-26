@@ -1,27 +1,58 @@
 @import "tailwindcss";
 
-/* shadcn/ui design tokens (Tailwind v4 CSS-first config) */
+/*
+ * CSO Registry — government design system (Batch 1)
+ * Palette: institutional navy + gold, warm stone neutrals.
+ * Type: Inter Variable (UI) + Source Serif 4 (display).
+ * Accessibility: WCAG 2.1 AA contrast targets, focus-visible standard.
+ */
+
+@theme {
+  /* Institutional navy */
+  --color-gov-950: #071120;
+  --color-gov-900: #0B1D33;
+  --color-gov-800: #102A43;
+  --color-gov-700: #1A3A5C;
+  --color-gov-600: #2A5079;
+  --color-gov-200: #B8C9DD;
+  --color-gov-100: #DCE6F2;
+  --color-gov-50: #F2F6FB;
+
+  /* Gold accent */
+  --color-gold-700: #8A6D14;
+  --color-gold-600: #B08A1E;
+  --color-gold-500: #C9A227;
+  --color-gold-300: #E7C866;
+  --color-gold-100: #F6EDD4;
+  --color-gold-50: #FBF7EC;
+
+  /* Typography */
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+}
+
+/* shadcn/ui semantic tokens — remapped onto the government palette */
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.141 0.005 285.823);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.141 0.005 285.823);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.141 0.005 285.823);
-  --primary: oklch(0.21 0.006 285.885);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.967 0.001 286.375);
-  --secondary-foreground: oklch(0.21 0.006 285.885);
-  --muted: oklch(0.967 0.001 286.375);
-  --muted-foreground: oklch(0.552 0.016 285.938);
-  --accent: oklch(0.967 0.001 286.375);
-  --accent-foreground: oklch(0.21 0.006 285.885);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(0.92 0.004 286.32);
-  --input: oklch(0.92 0.004 286.32);
-  --ring: oklch(0.705 0.015 286.067);
-  --radius: 0.625rem;
+  --background: #F6F7F4;
+  --foreground: #1D2733;
+  --card: #FFFFFF;
+  --card-foreground: #1D2733;
+  --popover: #FFFFFF;
+  --popover-foreground: #1D2733;
+  --primary: #102A43;            /* navy buttons */
+  --primary-foreground: #FFFFFF;
+  --secondary: #F1F2EE;
+  --secondary-foreground: #1D2733;
+  --muted: #F1F2EE;
+  --muted-foreground: #5B6774;
+  --accent: #F1F2EE;
+  --accent-foreground: #1D2733;
+  --destructive: #A32525;
+  --destructive-foreground: #FFFFFF;
+  --border: #E3E5E1;
+  --input: #D8DAD6;
+  --ring: #C9A227;               /* gold focus */
+  --radius: 0.375rem;            /* institutional = small radii */
 }
 
 @theme inline {
@@ -44,17 +75,56 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+  --radius-sm: calc(var(--radius) - 2px);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 4px);
+  --radius-xl: calc(var(--radius) + 8px);
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
   body {
-    @apply bg-background text-foreground antialiased;
+    @apply bg-background text-foreground font-sans antialiased;
+    font-feature-settings: "cv11", "ss01";
+  }
+  h1, h2, h3 {
+    @apply font-serif tracking-tight;
+  }
+  /* WCAG: always-visible keyboard focus */
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button {
+    margin: 0;
+  }
+}
+
+@layer components {
+  /* Small-caps label used across the official chrome */
+  .eyebrow {
+    @apply text-[10px] font-semibold uppercase tracking-[0.28em];
+  }
+  /* Standard bordered panel */
+  .gov-panel {
+    @apply rounded-lg border border-stone-200 bg-white shadow-sm;
+  }
+  /* Form inputs (single source of truth — pages import these) */
+  .gov-input {
+    @apply w-full rounded-md border border-input bg-white px-3 py-2 text-sm shadow-[inset_0_1px_2px_rgba(16,42,67,0.04)] placeholder:text-stone-400 focus:border-gov-600 focus:outline-none focus:ring-2 focus:ring-gold-500/30 disabled:bg-stone-50 disabled:text-stone-400;
+  }
+  .gov-select {
+    @apply w-full rounded-md border border-input bg-white px-3 py-2 text-sm shadow-sm focus:border-gov-600 focus:outline-none focus:ring-2 focus:ring-gold-500/30;
+  }
+  .gov-label {
+    @apply text-xs font-semibold uppercase tracking-wide text-stone-500;
   }
 }
