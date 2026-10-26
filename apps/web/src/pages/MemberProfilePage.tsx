@@ -1,7 +1,9 @@
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { CheckCircle2, Undo2, XCircle } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { Button } from "@/components/ui/button";
+import { STANDING_STATUSES } from "@cso-registry/shared";
 
 interface OrgRef {
   id: string;
@@ -17,6 +19,15 @@ interface AssistanceRec {
   organization: OrgRef;
 }
 
+interface MembershipRow {
+  id: string;
+  status: string;
+  role?: string | null;
+  goodStanding?: string | null;
+  endedAt?: string | null;
+  organization: OrgRef;
+}
+
 interface MemberProfile {
   id: string;
   firstName: string;
@@ -28,18 +39,76 @@ interface MemberProfile {
   barangay: string;
   householdId?: string | null;
   consentAccepted: boolean;
-  memberships: { id: string; status: string; role?: string | null; goodStanding?: string | null; organization: OrgRef }[];
+  memberships: MembershipRow[];
   assistances: AssistanceRec[];
 }
+
+interface Me {
+  role: "ADMIN" | "PRESIDENT";
+  organization?: { id: string; name: string } | null;
+}
+
+const statusCls: Record<string, string> = {
+  ACTIVE: "border-emerald-300 text-emerald-700 bg-emerald-50",
+  PENDING: "border-amber-300 text-amber-700 bg-amber-50",
+  CLEARED: "border-border text-muted-foreground bg-muted/40",
+};
+
+const standingCls: Record<string, string> = {
+  GOOD_STANDING: "border-emerald-300 text-emerald-700 bg-emerald-50",
+  WITH_CASES: "border-red-300 text-red-700 bg-red-50",
+  PENDING_CLEARANCE: "border-amber-300 text-amber-700 bg-amber-50",
+};
+
+const standingLabel: Record<string, string> = {
+  GOOD_STANDING: "good standing ✓",
+  WITH_CASES: "with cases ⚠",
+  PENDING_CLEARANCE: "clearance pending~",
+};
+
+const standingActionLabel: Record<string, string> = {
+  GOOD_STANDING: "Good standing",
+  WITH_CASES: "With cases",
+  PENDING_CLEARANCE: "Clearance pending",
+};
 
 export function MemberProfilePage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const member = useQuery({
     queryKey: ["member", id],
     queryFn: () => apiFetch<MemberProfile>(`/members/${id}`),
   });
+  const me = useQuery({ queryKey: ["me"], queryFn: () => apiFetch<Me>("/me") });
+
+  const [note, setNote] = useState<string | null>(null);
+  const [clearancePick, setClearancePick] = useState<Record<string, string>>({});
+  const [busyKey, setBusyKey] = useState<string | null>(null);
+
+  async function act(kind: string, membershipId: string, extra?: Record<string, unknown>) {
+    const key = `${kind}-${membershipId}`;
+    setBusyKey(key);
+    setNote(null);
+    try {
+      const result = await apiFetch<MembershipRow>(`/memberships/${membershipId}/${kind}`, {
+        method: "POST",
+        body: JSON.stringify(extra ?? {}),
+      });
+      setNote(
+        `${result.organizationName}: ${kind === "clearance" ? `clearance set → ${standingActionLabel[result.goodStanding ?? ""]}` : kind === "turnover" ? "membership turned over (CLEARED)" : "reactivated to ACTIVE"}`,
+      );
+      await queryClient.invalidateQueries({ queryKey: ["member", id] });
+    } catch (e) {
+      setNote(`⚠ ${(e as Error).message}`);
+    } finally {
+      setBusyKey(null);
+    }
+  }
+
+  const isAdmin = me.data?.role === "ADMIN";
+  const myOrgId = me.data?.organization?.id;
 
   if (member.isLoading) return null;
   if (member.isError || !member.data) {
@@ -95,16 +164,77 @@ export function MemberProfilePage() {
 
         <div className="border rounded-lg p-4">
           <h2 className="text-sm font-medium mb-2">Cross-organization memberships</h2>
-          <div className="flex flex-wrap gap-2">
-            {m.memberships.map((ms) => (
-              <span
-                key={ms.id}
-                className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs"
-              >
-                {ms.organization.name}
-                <span className="text-muted-foreground">({ms.status})</span>
-              </span>
-            ))}
+          <div className="space-y-2">
+            {m.memberships.map((ms) => {
+              const mine = isAdmin || ms.organization.id === myOrgId;
+              return (
+                <div key={ms.id} className="flex flex-wrap items-center gap-1.5 border rounded px-2 py-1.5">
+                  <span className="text-sm font-medium">{ms.organization.name}</span>
+                  <span className={`rounded-full border px-2 py-0.5 text-xs ${statusCls[ms.status] ?? ""}`}>
+                    {ms.status}
+                  </span>
+                  {ms.goodStanding && (
+                    <span className={`rounded-full border px-2 py-0.5 text-xs ${standingCls[ms.goodStanding] ?? ""}`}>
+                      {standingLabel[ms.goodStanding]}
+                    </span>
+                  )}
+                  {ms.endedAt && (
+                    <span className="text-xs text-muted-foreground">
+                      ended {new Date(ms.endedAt).toLocaleDateString()}
+                    </span>
+                  )}
+                  {mine && (
+                    <span className="ml-auto flex flex-wrap items-center gap-1">
+                      {isAdmin && (
+                        <>
+                          <select
+                            value={clearancePick[ms.id] ?? ""}
+                            onChange={(e) => setClearancePick((s) => ({ ...s, [ms.id]: e.target.value }))}
+                            className="rounded border border-input bg-transparent px-1 py-0.5 text-xs"
+                          >
+                            <option value="">Set clearance…</option>
+                            {STANDING_STATUSES.map((s) => (
+                              <option key={s} value={s}>
+                                {standingActionLabel[s]}
+                              </option>
+                            ))}
+                          </select>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={!clearancePick[ms.id] || busyKey === `clearance-${ms.id}`}
+                            onClick={() =>
+                              void act("clearance", ms.id, { goodStanding: clearancePick[ms.id] })
+                            }
+                          >
+                            <CheckCircle2 className="size-3" /> Set
+                          </Button>
+                        </>
+                      )}
+                      {ms.status === "CLEARED" || ms.endedAt ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={busyKey === `reactivate-${ms.id}`}
+                          onClick={() => void act("reactivate", ms.id)}
+                        >
+                          <Undo2 className="size-3" /> Reactivate
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={busyKey === `turnover-${ms.id}`}
+                          onClick={() => void act("turnover", ms.id)}
+                        >
+                          <XCircle className="size-3" /> Turn over
+                        </Button>
+                      )}
+                    </span>
+                  )}
+                </div>
+              );
+            })}
             {m.memberships.length === 0 && (
               <span className="text-sm text-muted-foreground">No active memberships.</span>
             )}
@@ -114,8 +244,16 @@ export function MemberProfilePage() {
               Multiple memberships — this is the flag the duplicate check exists to surface.
             </p>
           )}
+          <p className="text-xs text-muted-foreground mt-2">
+            Clearance is named by the CSO Desk (verified standing); turnover/reactivation is
+            the organization's own roster call. Both land in the audit trail.
+          </p>
         </div>
       </div>
+
+      {note && (
+        <p className="text-sm border rounded-md px-3 py-2 bg-muted/30">{note}</p>
+      )}
 
       <div className="border rounded-lg p-4">
         <h2 className="text-sm font-medium mb-2">Assistance history (ayuda ledger)</h2>
@@ -151,7 +289,7 @@ export function MemberProfilePage() {
       </div>
 
       <p className="text-xs text-muted-foreground">
-        Good-standing clearance workflow arrives in Sprint 5 ·
+        Full audit trail at the CSO Desk's Audit screen ·
         <Link to="/members" className="underline"> members list</Link>
       </p>
     </div>

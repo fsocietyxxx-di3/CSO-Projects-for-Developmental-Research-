@@ -7,6 +7,8 @@ import adminUserRoutes from "./admin-users.js";
 import memberRoutes from "./members.js";
 import assistanceRoutes from "./assistances.js";
 import reportRoutes from "./reports.js";
+import membershipRoutes from "./memberships.js";
+import auditRoutes from "./audit.js";
 
 const router = Router();
 
@@ -48,5 +50,9 @@ router.use("/assistances", assistanceRoutes);
 
 /* Sprint 4 module — analytics aggregates + xlsx/pdf exports. */
 router.use("/reports", reportRoutes);
+
+/* Sprint 5 module — membership lifecycle (clearance / turnover) + audit lens. */
+router.use("/memberships", membershipRoutes);
+router.use("/audit", auditRoutes);
 
 export default router;

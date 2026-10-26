@@ -109,6 +109,11 @@ router.post("/", requireRole("ADMIN", "PRESIDENT"), async (req, res) => {
       error: "Member does not belong to this organization — assistance targets this org's own members.",
     });
   }
+  if (membership.status === "CLEARED" || membership.endedAt) {
+    return res.status(409).json({
+      error: "This member's membership in this organization was turned over — reactivate it before recording assistance.",
+    });
+  }
 
   const member = await prisma.member.findUnique({ where: { id: input.memberId } });
   if (!member) return res.status(404).json({ error: "Member not found" });

@@ -215,6 +215,49 @@ export interface UserSummary {
   organizationId?: string | null;
 }
 
+/* --------------------------- memberships (Sprint 5) -------------------------- */
+
+export const STANDING_STATUSES = [
+  "GOOD_STANDING",
+  "WITH_CASES",
+  "PENDING_CLEARANCE",
+] as const;
+export type StandingStatusValue = (typeof STANDING_STATUSES)[number];
+
+/**
+ * The CSO Desk names the clearance (verified standing of a membership);
+ * org presidents turn members over / reactivate them (roster autonomy).
+ */
+export const membershipClearanceSchema = z.object({
+  goodStanding: z.enum(STANDING_STATUSES, {
+    errorMap: () => ({ message: "goodStanding must be GOOD_STANDING | WITH_CASES | PENDING_CLEARANCE" }),
+  }),
+});
+export type MembershipClearanceInput = z.infer<typeof membershipClearanceSchema>;
+
+/** Lifecycle result returned by /memberships actions. */
+export interface MembershipActionResult {
+  id: string;
+  memberId: string;
+  organizationId: string;
+  organizationName: string;
+  status: string;
+  goodStanding: string | null;
+  endedAt: string | null;
+}
+
+/* ---------------------------------- audit ----------------------------------- */
+
+/** Sprint 5 — the read model behind the CSO Desk audit screen. */
+export interface AuditEntry {
+  id: string;
+  createdAt: string;
+  action: string;
+  entity: string | null;
+  meta: Record<string, unknown> | null;
+  user: { name: string; email: string } | null;
+}
+
 /* ---------------------------------- misc ----------------------------------- */
 
 export interface ApiError {

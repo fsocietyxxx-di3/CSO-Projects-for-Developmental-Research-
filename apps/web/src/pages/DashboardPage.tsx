@@ -109,11 +109,25 @@ export function DashboardPage() {
             the monthly meeting binder.
           </p>
         </Link>
+        <Link to="/audit" className="border rounded-lg p-6 hover:bg-muted transition-colors">
+          <Users className="size-5 mb-3" />
+          <div className="flex items-center gap-2">
+            <h2 className="font-medium">Good-Standing Clearances & Audit</h2>
+            <span className="rounded-full border px-2 py-0.5 text-xs text-muted-foreground">
+              live — Sprint 5
+            </span>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Turn members over with clearance named by the CSO Desk; every action since
+            day one visible in the audit lens.
+          </p>
+        </Link>
         {MODULES.filter(
           (mod) =>
             !mod.title.startsWith("Member Profiling") &&
             !mod.title.startsWith("Assistance Ledger") &&
-            !mod.title.startsWith("Reports"),
+            !mod.title.startsWith("Reports") &&
+            !mod.title.startsWith("Good-Standing"),
         ).map((m) => (
           <div key={m.title} className="border rounded-lg p-6 opacity-80">
             <m.icon className="size-5 mb-3" />
@@ -129,7 +143,7 @@ export function DashboardPage() {
       </div>
 
       <Button variant="outline" disabled>
-        Sprint 5 capabilities appear here next — good-standing clearances, audit lens & turnover.
+        ✅ All five sprints shipped — next: pilot onboarding, UptimeRobot, demo rehearsal.
       </Button>
     </div>
   );
