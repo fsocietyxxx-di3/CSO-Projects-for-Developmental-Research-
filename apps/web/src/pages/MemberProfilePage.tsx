@@ -318,13 +318,14 @@ export function MemberProfilePage() {
                 ))}
               </tbody>
             </table>
-            {/* Mobile */}
-            <ul className="mt-2 space-y-2 sm:hidden">
+            {/* Mobile — ayuda timeline */}
+            <ul className="relative mt-3 space-y-3 border-l border-gold-500/40 pl-4 sm:hidden">
               {m.assistances.map((a) => (
                 <li
                   key={a.id}
-                  className="flex items-start justify-between gap-3 border-b border-stone-100 pb-2 text-sm"
+                  className="relative flex items-start justify-between gap-3 text-sm"
                 >
+                  <span className="absolute -left-[1.32rem] top-1 size-2 rounded-full border-2 border-white bg-gold-500" />
                   <div>
                     <p className="font-medium">{a.type}</p>
                     <p className="text-xs text-muted-foreground">

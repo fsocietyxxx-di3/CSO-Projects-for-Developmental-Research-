@@ -1,11 +1,19 @@
+/**
+ * Sprint 2 — encode a member. The form carries the process honestly:
+ * fill-up → duplicate check → decide. Flags render through the Badge
+ * system; primary actions pin to the thumb on phones (FormActionBar).
+ */
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle, CheckCircle2, ShieldAlert } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ChevronLeft, ShieldAlert, UserPlus } from "lucide-react";
+import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";
 import { Button } from "@/components/ui/button";
+import { Badge, statusBadgeVariant } from "@/components/ui/badge";
+import { FormActionBar } from "@/components/ui/action-bar";
 import {
   memberInputSchema,
   duplicateCheckInputSchema,
@@ -31,8 +39,27 @@ const formSchema = memberInputSchema.extend({
 
 type FormValues = z.infer<typeof formSchema>;
 
-const inputCls = "w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm";
-const labelCls = "text-xs font-medium text-muted-foreground";
+function Field({
+  label,
+  htmlFor,
+  children,
+  hint,
+}: {
+  label: string;
+  htmlFor: string;
+  children: React.ReactNode;
+  hint?: string;
+}) {
+  return (
+    <div className="space-y-1">
+      <label className="gov-label" htmlFor={htmlFor}>
+        {label}
+      </label>
+      {children}
+      {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
+    </div>
+  );
+}
 
 export function MemberEncodePage() {
   const navigate = useNavigate();
@@ -87,6 +114,7 @@ export function MemberEncodePage() {
         method: "POST",
         body: JSON.stringify(body),
       });
+      toast.success("Member encoded", { description: "The case file opens below. Duplicate detection stays on." });
       navigate(`/members/${res.id}`);
     } catch (e) {
       setError((e as Error).message);
@@ -96,175 +124,196 @@ export function MemberEncodePage() {
 
   const isAdmin = me.data?.role === "ADMIN";
   const chosenOrgId = watch("organizationId");
+  const working = phase === "checking" || phase === "saving";
 
-  return (
-    <div className="max-w-3xl space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Encode member</h1>
-        <p className="text-sm text-muted-foreground">
-          Steps: fill-up → duplicate check → decide. The flag protects ayuda from
-          double-receiving and catches family-wide duplicate enrollment.
-        </p>
-      </div>
+  if (phase === "form" || phase === "checking") {
+    return (
+      <div className="max-w-3xl space-y-6">
+        <div>
+          <p className="eyebrow text-gold-600">Member registry · new case file</p>
+          <h1 className="mt-1 font-serif text-2xl font-bold md:text-3xl">Encode member</h1>
+          <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
+            <Badge variant="navy">1 · Fill up</Badge>
+            <Badge variant="outline">2 · Duplicate check</Badge>
+            <Badge variant="outline">3 · Decide</Badge>
+            <span className="pl-1">The flag protects ayuda from double-receiving.</span>
+          </p>
+        </div>
 
-      {phase === "form" || phase === "checking" ? (
         <form
           onSubmit={(e) => {
             e.preventDefault();
             void handleSubmit(onCheckStart)(e as never);
           }}
-          className="border rounded-lg p-6 space-y-4"
+          className="gov-panel space-y-5 p-5 sm:p-6"
         >
-          <div className="grid gap-4 sm:grid-cols-3">
-            <div className="space-y-1">
-              <label className={labelCls} htmlFor="lastName">Last name *</label>
-              <input id="lastName" className={inputCls} {...register("lastName")} />
+          {/* Person */}
+          <fieldset className="space-y-4">
+            <legend className="eyebrow text-gold-600">Person</legend>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <Field label="Last name *" htmlFor="lastName">
+                <input id="lastName" className="gov-input" autoComplete="off" {...register("lastName")} />
+              </Field>
+              <Field label="First name *" htmlFor="firstName">
+                <input id="firstName" className="gov-input" autoComplete="off" {...register("firstName")} />
+              </Field>
+              <Field label="Middle name" htmlFor="middleName">
+                <input id="middleName" className="gov-input" autoComplete="off" {...register("middleName")} />
+              </Field>
             </div>
-            <div className="space-y-1">
-              <label className={labelCls} htmlFor="firstName">First name *</label>
-              <input id="firstName" className={inputCls} {...register("firstName")} />
-            </div>
-            <div className="space-y-1">
-              <label className={labelCls} htmlFor="middleName">Middle name</label>
-              <input id="middleName" className={inputCls} {...register("middleName")} />
-            </div>
-          </div>
 
-          <div className="grid gap-4 sm:grid-cols-3">
-            <div className="space-y-1">
-              <label className={labelCls} htmlFor="birthdate">Birthdate *</label>
-              <input id="birthdate" type="date" className={inputCls} {...register("birthdate")} />
+            <div className="grid gap-4 sm:grid-cols-3">
+              <Field label="Birthdate *" htmlFor="birthdate">
+                <input id="birthdate" type="date" className="gov-input" {...register("birthdate")} />
+              </Field>
+              <Field label="Gender *" htmlFor="gender">
+                <select id="gender" className="gov-select" {...register("gender")}>
+                  {GENDERS.map((g) => (
+                    <option key={g} value={g}>
+                      {g === "MALE" ? "Male" : g === "FEMALE" ? "Female" : "Other"}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Barangay *" htmlFor="barangay">
+                <input id="barangay" className="gov-input" autoComplete="off" {...register("barangay")} />
+              </Field>
             </div>
-            <div className="space-y-1">
-              <label className={labelCls} htmlFor="gender">Gender *</label>
-              <select id="gender" className={inputCls} {...register("gender")}>
-                {GENDERS.map((g) => (
-                  <option key={g} value={g}>
-                    {g === "MALE" ? "Male" : g === "FEMALE" ? "Female" : "Other"}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-1">
-              <label className={labelCls} htmlFor="barangay">Barangay *</label>
-              <input id="barangay" className={inputCls} {...register("barangay")} />
-            </div>
-          </div>
 
-          <div className="space-y-1">
-            <label className={labelCls} htmlFor="address">Address *</label>
-            <input id="address" className={inputCls} {...register("address")} />
-          </div>
+            <Field label="Address *" htmlFor="address">
+              <input id="address" className="gov-input" autoComplete="off" {...register("address")} />
+            </Field>
 
-          <div className="space-y-1 max-w-xs">
-            <label className={labelCls} htmlFor="householdId">Household tag (optional)</label>
-            <input id="householdId" placeholder="e.g. delacruz-mabini14" className={inputCls} {...register("householdId")} />
-            <p className="text-xs text-muted-foreground">
-              Groups a family — helps catch whole-family duplication like the
-              <em> Dela Cruz </em> pattern.
+            <Field
+              label="Household tag (optional)"
+              htmlFor="householdId"
+              hint="Groups a family — helps catch whole-family duplication like the Dela Cruz pattern."
+            >
+              <input
+                id="householdId"
+                placeholder="e.g. delacruz-mabini14"
+                className="gov-input"
+                autoComplete="off"
+                {...register("householdId")}
+              />
+            </Field>
+          </fieldset>
+
+          {/* Enrollment */}
+          <fieldset className="space-y-4 border-t border-stone-200 pt-4">
+            <legend className="eyebrow text-gold-600">Enrollment</legend>
+            {isAdmin ? (
+              <Field label="Encode into organization" htmlFor="organizationId">
+                <select id="organizationId" className="gov-select" {...register("organizationId")}>
+                  <option value="">Select organization…</option>
+                  {orgs.data?.map((o) => (
+                    <option key={o.id} value={o.id}>
+                      {o.name}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                This member will be encoded into{" "}
+                <span className="font-medium text-gov-900">{me.data?.organization?.name ?? "your organization"}</span>.
+              </p>
+            )}
+
+            <label className="flex items-start gap-3 rounded-md border border-gov-100 bg-gov-50 p-3">
+              <input
+                type="checkbox"
+                className="mt-0.5 size-4 accent-gov-800"
+                {...register("consentAccepted")}
+              />
+              <span className="text-sm">
+                <span className="font-medium">RA 10173 consent.</span> The member consents to their
+                profile being stored in the CSO Registry. Required before encoding.
+              </span>
+            </label>
+          </fieldset>
+
+          {error && (
+            <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800" role="alert">
+              {error}
             </p>
-          </div>
-
-          {isAdmin && (
-            <div className="space-y-1 max-w-xs">
-              <label className={labelCls} htmlFor="organizationId">Encode into organization (admin)</label>
-              <select id="organizationId" className={inputCls} {...register("organizationId")}>
-                <option value="">Select organization…</option>
-                {orgs.data?.map((o) => (
-                  <option key={o.id} value={o.id}>
-                    {o.name}
-                  </option>
-                ))}
-              </select>
-            </div>
           )}
 
-          <label className="flex items-start gap-3 border rounded-md p-3 bg-muted/30">
-            <input type="checkbox" className="mt-0.5" {...register("consentAccepted")} />
-            <span className="text-sm">
-              The member consents to their profile being stored in the CSO Registry
-              (RA 10173). Required before encoding.
-            </span>
-          </label>
-
-          {error && <p className="text-sm text-destructive">{error}</p>}
-
-          <Button type="submit" disabled={formState.isSubmitting || phase === "checking" || !consent}>
-            {phase === "checking" ? "Checking duplicates…" : "Run duplicate check →"}
-          </Button>
+          <FormActionBar>
+            <Button type="submit" disabled={working || !consent}>
+              {phase === "checking" ? "Checking duplicates…" : "Run duplicate check →"}
+            </Button>
+          </FormActionBar>
         </form>
-      ) : (
-        <div className="space-y-4">
-          <div className="flex items-start gap-3 border rounded-lg p-4 bg-muted/30">
-            <ShieldAlert className="size-5 mt-0.5" />
-            <div>
-              <h2 className="font-medium">Duplicate check complete</h2>
-              <p className="text-sm text-muted-foreground">
-                {hits.length === 0
-                  ? "No matches found in the pilot pool — you can encode this person as new."
-                  : `${hits.length} candidate${hits.length > 1 ? "s" : ""} found. Decide for each:`}
-              </p>
-            </div>
+      </div>
+    );
+  }
+
+  // Phase: deciding / saving
+  return (
+    <div className="max-w-3xl space-y-4 sm:space-y-5">
+      <div>
+        <p className="eyebrow text-gold-600">Step 3 · Decision</p>
+        <h1 className="mt-1 font-serif text-2xl font-bold md:text-3xl">Duplicate check complete</h1>
+        <p className="text-sm text-muted-foreground">
+          {hits.length === 0
+            ? "No matches found in the pilot pool — you can encode this person as new."
+            : `${hits.length} candidate${hits.length > 1 ? "s" : ""} found. Decide for each, or confirm a new person.`}
+        </p>
+      </div>
+
+      {hits.map((hit) => (
+        <div
+          key={hit.memberId}
+          className="gov-panel space-y-3 border-amber-300/70 bg-amber-50/40 p-4"
+        >
+          <div className="flex flex-wrap items-center gap-2">
+            <AlertTriangle className={`size-4 ${hit.matchType === "exact" ? "text-amber-600" : "text-stone-400"}`} />
+            <span className="font-medium text-gov-900">
+              {hit.fullName} · {hit.barangay}
+            </span>
+            <Badge variant={hit.matchType === "exact" ? statusBadgeVariant.exact : "outline"}>
+              {hit.matchType === "exact" ? "exact · name+birthdate" : "soft · fuzzy"}
+            </Badge>
           </div>
-
-          {hits.map((hit) => (
-            <div
-              key={hit.memberId}
-              className="border rounded-lg p-4 space-y-2 border-amber-300/60 bg-amber-50/40"
-            >
-              <div className="flex items-center gap-2">
-                {hit.matchType === "exact" ? (
-                  <AlertTriangle className="size-4 text-amber-600" />
-                ) : (
-                  <AlertTriangle className="size-4 text-muted-foreground" />
-                )}
-                <span className="font-medium">
-                  {hit.fullName} · {hit.barangay}
-                </span>
-                <span
-                  className={`rounded-full px-2 py-0.5 text-xs border ${
-                    hit.matchType === "exact"
-                      ? "border-amber-400 text-amber-700 bg-amber-100"
-                      : "border-border text-muted-foreground"
-                  }`}
-                >
-                  {hit.matchType === "exact" ? "exact (name+birthdate)" : "soft (fuzzy)"}
-                </span>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Already in: {hit.organizationNames.join(", ") || "—"}
-              </p>
-              <Button size="sm" variant="outline" onClick={() => void submitEnroll(hit.memberId)}>
-                <CheckCircle2 /> Same person — enroll to my organization
-              </Button>
-            </div>
-          ))}
-
-          <div className="border rounded-lg p-4 space-y-2">
-            <p className="text-sm">
-              {hits.length > 0
-                ? "Not the same person? (e.g., cousins/tsinelas twins — no problem)"
-                : "Ready to encode."}
-            </p>
-            <div className="flex gap-3">
-              <Button
-                size="sm"
-                onClick={() => void submitEnroll()}
-                disabled={isAdmin && !chosenOrgId}
-                title={isAdmin && !chosenOrgId ? "Select the organization first" : undefined}
-              >
-                {hits.length > 0 ? "Encode as NEW person" : "Encode"}
-              </Button>
-              <Button size="sm" variant="ghost" onClick={() => setPhase("form")}>
-                ← Back to edit
-              </Button>
-            </div>
-          </div>
-
-          {error && <p className="text-sm text-destructive">{error}</p>}
-          {phase === "saving" && <p className="text-sm text-muted-foreground">Saving…</p>}
+          <p className="text-sm text-muted-foreground">
+            Already in: {hit.organizationNames.join(", ") || "—"}
+          </p>
+          <Button size="sm" variant="outline" className="w-full sm:w-auto" onClick={() => void submitEnroll(hit.memberId)}>
+            <CheckCircle2 /> Same person — enroll to my organization
+          </Button>
         </div>
+      ))}
+
+      <div className="gov-panel space-y-2 p-4">
+        <p className="text-sm">
+          {hits.length > 0 ? "Not the same person? (e.g., cousins — no problem)" : "Ready to encode."}
+        </p>
+      </div>
+
+      {error && (
+        <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800" role="alert">
+          {error}
+        </p>
       )}
+      {phase === "saving" && (
+        <p className="flex items-center gap-2 text-sm text-muted-foreground">
+          <ShieldAlert className="size-4" /> Saving the case file…
+        </p>
+      )}
+
+      <FormActionBar>
+        <Button variant="ghost" onClick={() => setPhase("form")} disabled={phase === "saving"}>
+          <ChevronLeft /> Back to edit
+        </Button>
+        <Button
+          onClick={() => void submitEnroll()}
+          disabled={phase === "saving" || (isAdmin && !chosenOrgId)}
+          title={isAdmin && !chosenOrgId ? "Select the organization first" : undefined}
+        >
+          <UserPlus /> {hits.length > 0 ? "Encode as NEW person" : "Encode"}
+        </Button>
+      </FormActionBar>
     </div>
   );
 }

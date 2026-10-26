@@ -1,14 +1,18 @@
 /**
  * Sprint 3 — record one assistance entry. The form itself carries the
- * duplicate-awareness: member picker shows repeat badges, and blocked
+ * duplicate-awareness: member picker shows prior entries inline, blocked
  * attempts surface the 30-day window / allotment-cap messages verbatim.
  */
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle, Repeat2 } from "lucide-react";
+import { AlertTriangle, HandHeart, Repeat2 } from "lucide-react";
+import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { FormActionBar } from "@/components/ui/action-bar";
+
 interface Me {
   role: "ADMIN" | "PRESIDENT";
   organization?: { id: string; name: string } | null;
@@ -29,8 +33,28 @@ interface MemberListItem {
 }
 
 const COMMON_TYPES = ["AYUDA", "MEDICAL", "BURIAL", "EDUCATION", "FOOD PACK", "LIVELIHOOD"];
-const inputCls = "w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm";
-const labelCls = "text-xs font-medium text-muted-foreground";
+
+function Field({
+  label,
+  htmlFor,
+  children,
+  hint,
+}: {
+  label: string;
+  htmlFor: string;
+  children: React.ReactNode;
+  hint?: string;
+}) {
+  return (
+    <div className="space-y-1">
+      <label className="gov-label" htmlFor={htmlFor}>
+        {label}
+      </label>
+      {children}
+      {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
+    </div>
+  );
+}
 
 export function AssistanceRecordPage() {
   const navigate = useNavigate();
@@ -91,12 +115,19 @@ export function AssistanceRecordPage() {
         setRepeatNotice(
           "Recorded — but this member is a REPEAT receiver (2nd+ entry from this org). The ledger flags audited repeats like this one.",
         );
+        toast.warning("Repeat receiver on record", {
+          description: "The ledger will badge this entry as a repeat. Record stands.",
+        });
         setSubmitting(false);
         return;
       }
+      toast.success("Entry recorded", {
+        description: "One entry today is what makes the next duplicate attempt get stopped by the window guard.",
+      });
       navigate("/assistances");
     } catch (e) {
       setError((e as Error).message);
+      toast.error("Entry not recorded", { description: (e as Error).message });
       setSubmitting(false);
     }
   }
@@ -104,107 +135,158 @@ export function AssistanceRecordPage() {
   return (
     <div className="max-w-2xl space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold">Record assistance</h1>
-        <p className="text-sm text-muted-foreground">
+        <p className="eyebrow text-gold-600">Ayuda ledger · new entry</p>
+        <h1 className="mt-1 font-serif text-2xl font-bold md:text-3xl">Record assistance</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
           One entry today is what makes the <em>next</em> duplicate attempt get stopped by the window guard.
         </p>
       </div>
 
-      <div className="border rounded-lg p-6 space-y-4">
-        {isAdmin ? (
-          <div className="space-y-1">
-            <label className={labelCls} htmlFor="org">Organization *</label>
-            <select
-              id="org"
-              className={inputCls}
-              value={orgId}
-              onChange={(e) => {
-                setOrgId(e.target.value);
-                setMemberId("");
-              }}
-            >
-              <option value="">Select organization…</option>
-              {orgs.data?.map((o) => (
-                <option key={o.id} value={o.id}>{o.name}</option>
-              ))}
-            </select>
-          </div>
-        ) : (
-          <div className="rounded-md border bg-muted/30 px-3 py-2 text-sm">
-            Organization: <span className="font-medium">{me.data?.organization?.name ?? "—"}</span>
-          </div>
-        )}
-
-        <div className="space-y-1">
-          <label className={labelCls} htmlFor="member">Member who received *</label>
-          <select
-            id="member"
-            className={inputCls}
-            value={memberId}
-            onChange={(e) => setMemberId(e.target.value)}
-            disabled={!effectiveOrgId}
-          >
-            <option value="">{effectiveOrgId ? "Select member…" : "Choose an organization first"}</option>
-            {orgMembers.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.lastName}, {m.firstName} — {m.barangay}
-                {m.assistanceCount > 0 ? ` (⚠ ${m.assistanceCount} prior)` : ""}
-              </option>
-            ))}
-          </select>
-          {chosen && chosen.assistanceCount > 0 && (
-            <p className="mt-1 flex items-center gap-1 text-xs text-amber-700">
-              <Repeat2 className="size-3.5" />
-              This member already received {chosen.assistanceCount} entr
-              {chosen.assistanceCount === 1 ? "y" : "ies"} across all orgs — recording is still your call,
-              but the system will flag it.
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          void submit();
+        }}
+        className="gov-panel space-y-5 p-5 sm:p-6"
+      >
+        {/* Scope */}
+        <fieldset className="space-y-4">
+          <legend className="eyebrow text-gold-600">Assistance details</legend>
+          {isAdmin ? (
+            <Field label="Organization *" htmlFor="org">
+              <select
+                id="org"
+                className="gov-select"
+                value={orgId}
+                onChange={(e) => {
+                  setOrgId(e.target.value);
+                  setMemberId("");
+                }}
+              >
+                <option value="">Select organization…</option>
+                {orgs.data?.map((o) => (
+                  <option key={o.id} value={o.id}>
+                    {o.name}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Recording for{" "}
+              <span className="font-medium text-gov-900">{me.data?.organization?.name ?? "—"}</span>.
             </p>
           )}
-        </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1">
-            <label className={labelCls} htmlFor="type">Type *</label>
-            <input id="type" list="common-types" className={inputCls} value={type}
-              onChange={(e) => setType(e.target.value)} placeholder="AYUDA, MEDICAL…" />
-            <datalist id="common-types">
-              {COMMON_TYPES.map((t) => <option key={t} value={t} />)}
-            </datalist>
+            <Field label="Member who received *" htmlFor="member">
+              <select
+                id="member"
+                className="gov-select"
+                value={memberId}
+                onChange={(e) => setMemberId(e.target.value)}
+                disabled={!effectiveOrgId}
+              >
+                <option value="">{effectiveOrgId ? "Select member…" : "Choose an organization first"}</option>
+                {orgMembers.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.lastName}, {m.firstName} — {m.barangay}
+                    {m.assistanceCount > 0 ? ` (${m.assistanceCount} prior)` : ""}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            {chosen && chosen.assistanceCount > 0 && (
+              <p className="flex items-start gap-2 rounded-md bg-amber-50 px-2.5 py-1.5 text-xs text-amber-800" role="status">
+                <Repeat2 className="mt-0.5 size-3.5 shrink-0" />
+                This member already received {chosen.assistanceCount} entr
+                {chosen.assistanceCount === 1 ? "y" : "ies"} across all orgs — recording is still your call,
+                but the system will flag it.
+              </p>
+            )}
           </div>
-          <div className="space-y-1">
-            <label className={labelCls} htmlFor="receivedAt">Date received *</label>
-            <input id="receivedAt" type="date" className={inputCls} value={receivedAt}
-              onChange={(e) => setReceivedAt(e.target.value)} />
-          </div>
-        </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-1">
-            <label className={labelCls} htmlFor="items">Items (optional)</label>
-            <input id="items" className={inputCls} value={items} onChange={(e) => setItems(e.target.value)}
-              placeholder="rice + groceries, meds…" />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Type *" htmlFor="type">
+              <input
+                id="type"
+                list="common-types"
+                className="gov-input"
+                value={type}
+                onChange={(e) => setType(e.target.value)}
+                placeholder="AYUDA, MEDICAL…"
+                autoComplete="off"
+              />
+              <datalist id="common-types">
+                {COMMON_TYPES.map((t) => (
+                  <option key={t} value={t} />
+                ))}
+              </datalist>
+            </Field>
+            <Field label="Date received *" htmlFor="receivedAt">
+              <input
+                id="receivedAt"
+                type="date"
+                className="gov-input"
+                value={receivedAt}
+                onChange={(e) => setReceivedAt(e.target.value)}
+              />
+            </Field>
           </div>
-          <div className="space-y-1">
-            <label className={labelCls} htmlFor="amount">Amount, ₱ (optional)</label>
-            <input id="amount" type="number" min="0" step="0.01" className={inputCls} value={amount}
-              onChange={(e) => setAmount(e.target.value)} placeholder="1500" />
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Items (optional)" htmlFor="items">
+              <input
+                id="items"
+                className="gov-input"
+                value={items}
+                onChange={(e) => setItems(e.target.value)}
+                placeholder="rice + groceries, meds…"
+                autoComplete="off"
+              />
+            </Field>
+            <Field label="Amount, ₱ (optional)" htmlFor="amount">
+              <input
+                id="amount"
+                type="number"
+                min="0"
+                step="0.01"
+                className="gov-input"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                placeholder="1500"
+                inputMode="decimal"
+              />
+            </Field>
           </div>
-        </div>
+        </fieldset>
 
         {isAdmin && (
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={override} onChange={(e) => setOverride(e.target.checked)} />
-            Allotment override {`(audited — only if the cap is already exhausted)`}
+          <label className="flex items-start gap-3 rounded-md border border-stone-200 bg-stone-50 p-3 text-sm">
+            <input
+              type="checkbox"
+              className="mt-0.5 size-4 accent-gov-800"
+              checked={override}
+              onChange={(e) => setOverride(e.target.checked)}
+            />
+            <span>
+              <span className="font-medium">Allotment override</span>{" "}
+              <Badge variant="outline">audited</Badge>{" "}
+              — use only if the cap is already exhausted; the Desk reviews every override in the audit trail.
+            </span>
           </label>
         )}
 
         {error && (
-          <div className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-            <AlertTriangle className="size-4 mt-0.5 shrink-0" />
+          <div
+            className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800"
+            role="alert"
+          >
+            <AlertTriangle className="mt-0.5 size-4 shrink-0" />
             <div>
               {error}
               {error.includes("within the last 30 days") && (
-                <span className="block text-xs mt-1 text-muted-foreground">
+                <span className="mt-1 block text-xs text-red-700/80">
                   This is the window guard doing its job — the same member of this org already received within
                   30 days.
                 </span>
@@ -214,10 +296,14 @@ export function AssistanceRecordPage() {
         )}
 
         {repeatNotice && (
-          <div className="space-y-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-            <p className="flex items-center gap-1"><Repeat2 className="size-4" /> {repeatNotice}</p>
-            <div className="flex gap-2">
-              <Button size="sm" variant="outline" onClick={() => navigate("/assistances")}>Go to ledger</Button>
+          <div className="space-y-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2.5 text-sm text-amber-800" role="status">
+            <p className="flex items-start gap-1.5">
+              <Repeat2 className="mt-0.5 size-4 shrink-0" /> {repeatNotice}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" variant="outline" onClick={() => navigate("/assistances")}>
+                Go to ledger
+              </Button>
               {memberId && (
                 <Button size="sm" variant="ghost" onClick={() => navigate(`/members/${memberId}`)}>
                   View member
@@ -227,13 +313,15 @@ export function AssistanceRecordPage() {
           </div>
         )}
 
-        <div className="flex gap-3">
-          <Button onClick={() => void submit()} disabled={submitting}>
-            {submitting ? "Recording…" : "Record entry"}
+        <FormActionBar>
+          <Button type="button" variant="ghost" onClick={() => navigate("/assistances")} disabled={submitting}>
+            Cancel
           </Button>
-          <Button variant="ghost" onClick={() => navigate("/assistances")}>Cancel</Button>
-        </div>
-      </div>
+          <Button type="submit" disabled={submitting}>
+            <HandHeart /> {submitting ? "Recording…" : "Record entry"}
+          </Button>
+        </FormActionBar>
+      </form>
     </div>
   );
 }
