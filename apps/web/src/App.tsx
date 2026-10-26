@@ -9,8 +9,8 @@
  *    mobile drawer.
  */
 import { useState } from "react";
-import { Link, Navigate, NavLink, Route, Routes, useNavigate, useLocation } from "react-router-dom";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link, Navigate, NavLink, Route, Routes, useLocation, useNavigate } from "react-router-dom";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { LogOut, Menu, X, RefreshCw, ShieldAlert } from "lucide-react";
 import { toast, Toaster } from "sonner";
 import { supabase } from "@/lib/supabase";
@@ -91,15 +91,41 @@ function Shell({ children, me }: { children: React.ReactNode; me: Me }) {
   const queryClient = useQueryClient();
   const [drawer, setDrawer] = useState(false);
   const drawerMount = useEnterExit(drawer);
+  const [closing, setClosing] = useState(false);
   const location = useLocation();
 
-  const signOut = useMutation({
-    mutationFn: () => supabase.auth.signOut(),
-    onSuccess: () => {
-      queryClient.clear();
-      navigate("/login");
-    },
-  });
+  /**
+   * Session truth on the way OUT:
+   *  1. the screen is taken over instantly by the closing splash (no
+   *     silent wait, no frozen-looking chrome — closing state renders so
+   *     double-presses cannot start a second teardown),
+   *  2. the identity-server call is raced with a timeout; sign-out NEVER
+   *     hangs — the local session is torn down regardless and the
+   *     outcome is toasted honestly,
+   *  3. queries are cancelled BEFORE the cache is cleared so the dashboard
+   *     does not fire a burst of doomed refetches behind the splash
+   *     (this was the visible freeze).
+   */
+  async function signOutNow() {
+    if (closing) return;
+    setClosing(true);
+    const timedOut = Symbol("timed-out");
+    const outcome = await Promise.race([
+      supabase.auth.signOut().then(() => "confirmed" as const),
+      new Promise<typeof timedOut>((resolve) => setTimeout(() => resolve(timedOut), 4000)),
+    ]);
+    if (outcome === "confirmed") {
+      toast.success("Signed out", { description: "Your session is closed. See you at the desk." });
+    } else {
+      toast.error("Signed out on this device", {
+        description:
+          "The identity server did not confirm (it may be waking up). Your local session is cleared anyway.",
+      });
+    }
+    void queryClient.cancelQueries();
+    queryClient.clear();
+    navigate("/login", { replace: true });
+  }
 
   const isAdmin = me.role === "ADMIN";
   const initials = (me.name || me.email || "?")    .split(/\s+/)
@@ -111,6 +137,11 @@ function Shell({ children, me }: { children: React.ReactNode; me: Me }) {
     `rounded px-1 py-0.5 text-sm transition-colors ${isActive ? "text-white font-medium border-b-2 border-gold-500" : "text-white/70 hover:text-white"}`;
   const drawerLinkCls = (isActive: boolean) =>
     `block border-l-2 px-4 py-2.5 text-sm ${isActive ? "border-gold-500 bg-gov-700/60 text-white" : "border-transparent text-white/75 hover:bg-gov-700 hover:text-white"}`;
+
+  /* Signing out: take over the screen — the office closes, honestly. */
+  if (closing) {
+    return <Splash label="Closing your session…" />;
+  }
 
   return (
     <div className="flex min-h-dvh flex-col">
@@ -165,7 +196,7 @@ function Shell({ children, me }: { children: React.ReactNode; me: Me }) {
                 </span>
               </span>
               <button
-                onClick={() => signOut.mutate()}
+                onClick={() => void signOutNow()}
                 aria-label="Sign out"
                 title="Sign out"
                 className="rounded p-2 text-white/70 hover:bg-gov-700 hover:text-white"
@@ -178,7 +209,7 @@ function Shell({ children, me }: { children: React.ReactNode; me: Me }) {
           <button
             className="ml-auto rounded-md p-2 text-white/80 hover:bg-gov-700 md:hidden"
             aria-label="Sign out"
-            onClick={() => signOut.mutate()}
+            onClick={() => void signOutNow()}
           >
             <LogOut className="size-5" />
           </button>
@@ -267,8 +298,14 @@ function Shell({ children, me }: { children: React.ReactNode; me: Me }) {
 
 export default function App() {
   const me = useMe();
+  const atLogin = useLocation().pathname === "/login";
 
-  if (me.isPending) return <Splash label="Verifying your session with the CSO Desk…" />;
+  // On the login screen we never hold the render hostage to session
+  // verification — the gate renders immediately (also prevents the
+  // "verifying…" flash right after signing out).
+  if (me.isPending && !atLogin) {
+    return <Splash label="Verifying your session with the CSO Desk…" />;
+  }
 
   const authed = !me.isError && !!me.data;
 
