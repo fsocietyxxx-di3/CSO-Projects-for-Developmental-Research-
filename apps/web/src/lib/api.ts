@@ -39,3 +39,38 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
   if (res.status === 204) return undefined as T;
   return res.json() as Promise<T>;
 }
+
+/**
+ * Binary download (exports) — same auth header, but returns the raw Blob
+ * plus the server's chosen filename from Content-Disposition.
+ */
+export async function apiBlob(
+  path: string,
+  init: RequestInit = {},
+): Promise<{ blob: Blob; filename: string | null }> {
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token;
+
+  const res = await fetch(`${BASE}${path}`, {
+    ...init,
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(init.headers ?? {}),
+    },
+  });
+
+  if (!res.ok) {
+    let message = `API error ${res.status}`;
+    try {
+      const body = (await res.json()) as { error?: string };
+      if (body.error) message = body.error;
+    } catch {
+      /* non-JSON error body */
+    }
+    throw new Error(message);
+  }
+
+  const cd = res.headers.get("content-disposition");
+  const filename = /filename="([^"]+)"/.exec(cd ?? "")?.[1] ?? null;
+  return { blob: await res.blob(), filename };
+}

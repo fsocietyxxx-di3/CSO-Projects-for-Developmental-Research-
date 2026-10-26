@@ -6,6 +6,7 @@ import organizationRoutes from "./organizations.js";
 import adminUserRoutes from "./admin-users.js";
 import memberRoutes from "./members.js";
 import assistanceRoutes from "./assistances.js";
+import reportRoutes from "./reports.js";
 
 const router = Router();
 
@@ -44,5 +45,8 @@ router.use("/members", memberRoutes);
 
 /* Sprint 3 module — ayuda ledger, allotments, fair-rotation suggestion. */
 router.use("/assistances", assistanceRoutes);
+
+/* Sprint 4 module — analytics aggregates + xlsx/pdf exports. */
+router.use("/reports", reportRoutes);
 
 export default router;

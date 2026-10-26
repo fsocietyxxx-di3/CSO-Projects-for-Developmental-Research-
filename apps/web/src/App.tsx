@@ -13,6 +13,7 @@ import { MemberEncodePage } from "@/pages/MemberEncodePage";
 import { MemberProfilePage } from "@/pages/MemberProfilePage";
 import { AssistancesPage } from "@/pages/AssistancesPage";
 import { AssistanceRecordPage } from "@/pages/AssistanceRecordPage";
+import { ReportsPage } from "@/pages/ReportsPage";
 
 interface Me {
   id: string;
@@ -56,6 +57,7 @@ function Shell({ children }: { children: React.ReactNode }) {
             <Link to="/" className="text-muted-foreground hover:text-foreground">Dashboard</Link>
             <Link to="/members" className="text-muted-foreground hover:text-foreground">Members</Link>
             <Link to="/assistances" className="text-muted-foreground hover:text-foreground">Ledger</Link>
+            <Link to="/reports" className="text-muted-foreground hover:text-foreground">Reports</Link>
             <Link to="/organizations" className="text-muted-foreground hover:text-foreground">Organizations</Link>
             <span className="text-muted-foreground">{me?.email}</span>
             <Button variant="ghost" size="icon" title="Sign out" onClick={() => signOut.mutate()}>
@@ -94,6 +96,7 @@ export default function App() {
                 <Route path="members/:id" element={<MemberProfilePage />} />
                 <Route path="assistances" element={<AssistancesPage />} />
                 <Route path="assistances/new" element={<AssistanceRecordPage />} />
+                <Route path="reports" element={<ReportsPage />} />
                 <Route path="organizations" element={<OrganizationsPage />} />
                 <Route path="*" element={<div className="text-muted-foreground">404 — page not found</div>} />
               </Routes>

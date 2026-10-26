@@ -96,10 +96,24 @@ export function DashboardPage() {
             distinct people, and the fair next-batch suggestion.
           </p>
         </Link>
+        <Link to="/reports" className="border rounded-lg p-6 hover:bg-muted transition-colors">
+          <BarChart3 className="size-5 mb-3" />
+          <div className="flex items-center gap-2">
+            <h2 className="font-medium">Reports & Analytics</h2>
+            <span className="rounded-full border px-2 py-0.5 text-xs text-muted-foreground">
+              live — Sprint 4
+            </span>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Org, barangay & GAD breakdowns plus one-click Excel and PDF exports for
+            the monthly meeting binder.
+          </p>
+        </Link>
         {MODULES.filter(
           (mod) =>
             !mod.title.startsWith("Member Profiling") &&
-            !mod.title.startsWith("Assistance Ledger"),
+            !mod.title.startsWith("Assistance Ledger") &&
+            !mod.title.startsWith("Reports"),
         ).map((m) => (
           <div key={m.title} className="border rounded-lg p-6 opacity-80">
             <m.icon className="size-5 mb-3" />
@@ -115,7 +129,7 @@ export function DashboardPage() {
       </div>
 
       <Button variant="outline" disabled>
-        Sprint 4 capabilities appear here next — GAD analytics & PDF/Excel exports.
+        Sprint 5 capabilities appear here next — good-standing clearances, audit lens & turnover.
       </Button>
     </div>
   );

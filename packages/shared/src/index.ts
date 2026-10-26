@@ -158,6 +158,43 @@ export interface NextEligibleResult {
   next: NextEligibleMember[];
 }
 
+/* ---------------------------------- reports --------------------------------- */
+
+/** Sprint 4 — aggregates behind the Reports screen + exports. */
+export interface ReportOrgRow {
+  name: string;
+  activeMembers: number;
+  entries: number; // assistance rows
+  recipients: number; // distinct people aided
+  allotment: number;
+}
+export interface ReportBarangayRow {
+  barangay: string;
+  members: number;
+  recipients: number; // distinct people aided, same barangay
+}
+export interface ReportGenderRow {
+  gender: string;
+  label: string; // Male / Female / Other
+  members: number;
+  recipients: number;
+  amount: number; // PHP total of entries
+}
+export interface ReportTypeRow {
+  type: string;
+  entries: number;
+  amount: number;
+}
+export interface ReportSummary {
+  generatedAt: string;
+  scope: "ALL_ORGS" | "OWN_ORG";
+  totals: { members: number; organizations: number; entries: number; recipients: number; amountTotal: number };
+  byOrg: ReportOrgRow[];
+  byBarangay: ReportBarangayRow[];
+  byGender: ReportGenderRow[];
+  byType: ReportTypeRow[];
+}
+
 /* --------------------------- admin: user accounts -------------------------- */
 /** Presidents cannot self-register — the CSO Desk admin creates their accounts. */
 export const createUserSchema = z.object({
