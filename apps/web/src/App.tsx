@@ -9,12 +9,13 @@
  *    mobile drawer.
  */
 import { useState } from "react";
-import { Link, Navigate, NavLink, Route, Routes, useNavigate } from "react-router-dom";
+import { Link, Navigate, NavLink, Route, Routes, useNavigate, useLocation } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { LogOut, Menu, X, RefreshCw, ShieldAlert } from "lucide-react";
 import { toast, Toaster } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api";
+import { useEnterExit } from "@/lib/use-enter-exit";
 import { Button } from "@/components/ui/button";
 import { Seal } from "@/components/gov/seal";
 import { DashboardPage } from "@/pages/DashboardPage";
@@ -56,8 +57,10 @@ const NAV = [
 function Splash({ label }: { label: string }) {
   return (
     <div className="flex min-h-dvh flex-col items-center justify-center gap-4 bg-background">
-      <Seal className="size-24 animate-pulse" />
-      <p className="eyebrow text-stone-500">{label}</p>
+      <div className="anim-rise flex flex-col items-center gap-4">
+        <Seal className="size-24 animate-pulse" />
+        <p className="eyebrow text-stone-500">{label}</p>
+      </div>
     </div>
   );
 }
@@ -87,6 +90,8 @@ function Shell({ children, me }: { children: React.ReactNode; me: Me }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [drawer, setDrawer] = useState(false);
+  const drawerMount = useEnterExit(drawer);
+  const location = useLocation();
 
   const signOut = useMutation({
     mutationFn: () => supabase.auth.signOut(),
@@ -180,11 +185,20 @@ function Shell({ children, me }: { children: React.ReactNode; me: Me }) {
         </div>
       </header>
 
-      {/* Mobile drawer */}
-      {drawer && (
-        <div className="fixed inset-0 z-50 md:hidden" role="dialog" aria-modal="true">
-          <button aria-label="Close menu" className="absolute inset-0 bg-gov-950/55" onClick={() => setDrawer(false)} />
-          <aside className="absolute inset-y-0 left-0 flex w-72 flex-col bg-gov-800 shadow-2xl">
+      {/* Mobile drawer — motion: slide-in 200 ms, scrim fades (charter) */}
+      {drawerMount.mounted && (
+        <div className="fixed inset-0 z-50 md:hidden" role="dialog" aria-modal="true" aria-hidden={!drawerMount.shown}>
+          <button
+            aria-label="Close menu"
+            tabIndex={drawerMount.shown ? 0 : -1}
+            className={`absolute inset-0 bg-gov-950/55 transition-opacity ${drawerMount.shown ? "opacity-100" : "opacity-0"}`}
+            style={{ transitionDuration: "var(--motion-out)" }}
+            onClick={() => setDrawer(false)}
+          />
+          <aside
+            className={`absolute inset-y-0 left-0 flex w-72 flex-col bg-gov-800 shadow-2xl transition-transform ${drawerMount.shown ? "translate-x-0" : "-translate-x-full"}`}
+            style={{ transitionDuration: "var(--motion-in)", transitionTimingFunction: "var(--motion-ease)" }}
+          >
             <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
               <span className="flex items-center gap-2">
                 <Seal className="size-8" />
@@ -224,8 +238,10 @@ function Shell({ children, me }: { children: React.ReactNode; me: Me }) {
         </div>
       )}
 
-      {/* Content */}
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 md:px-6 md:py-8">{children}</main>
+      {/* Content — keyed wrapper gives each page its one quiet 200 ms entrance */}
+      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 md:px-6 md:py-8">
+        <div key={location.pathname} className="anim-rise">{children}</div>
+      </main>
 
       {/* Formal footer */}
       <footer className="border-t-2 border-gold-500 bg-gov-900 text-white/70">

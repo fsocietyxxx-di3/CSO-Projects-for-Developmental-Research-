@@ -34,7 +34,7 @@ export function Meter({ value, max, className }: { value: number; max: number; c
   return (
     <div className={cn("h-1.5 w-full rounded-full bg-stone-200 overflow-hidden", className)}>
       <div
-        className={`h-full rounded-full ${pct >= 90 ? "bg-gold-500" : pct >= 60 ? "bg-gov-600" : "bg-emerald-600"}`}
+        className={`h-full rounded-full transition-[width] duration-500 ease-out ${pct >= 90 ? "bg-gold-500" : pct >= 60 ? "bg-gov-600" : "bg-emerald-600"}`}
         style={{ width: `${pct}%` }}
       />
     </div>

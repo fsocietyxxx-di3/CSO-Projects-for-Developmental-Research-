@@ -128,3 +128,45 @@
     @apply text-xs font-semibold uppercase tracking-wide text-stone-500;
   }
 }
+
+/* ---------------------------------------------------------------------- */
+/* Motion charter — institutional restraint (documented for defense):      */
+/*   · one curve (ease-out), one rhythm (in 200 ms / out 150 ms)           */
+/*   · travel ≤ 8 px; fade + slide + scale ONLY                            */
+/*   · motion on spatial changes (drawer, sheet, dialog), status changes   */
+/*     (meter, toast, entrance) — never on data, never for decoration      */
+/*   · prefers-reduced-motion collapses everything to instant              */
+/* ---------------------------------------------------------------------- */
+:root {
+  --motion-in: 200ms;
+  --motion-out: 150ms;
+  --motion-ease: cubic-bezier(0.22, 1, 0.36, 1); /* ease-out-soft */
+}
+
+@keyframes gov-rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Page-level entrance (runs once per navigation via a keyed wrapper) */
+.anim-rise {
+  animation: gov-rise var(--motion-in) var(--motion-ease) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+    scroll-behavior: auto !important;
+  }
+}

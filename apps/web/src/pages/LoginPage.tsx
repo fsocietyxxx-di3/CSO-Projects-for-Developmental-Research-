@@ -103,7 +103,7 @@ export function LoginPage() {
         </div>
 
         <div className="w-full max-w-sm">
-          <form onSubmit={onSubmit} className="gov-panel space-y-4 p-6 sm:p-8">
+          <form onSubmit={onSubmit} className="gov-panel anim-rise space-y-4 p-6 sm:p-8">
             <div className="hidden lg:block">
               <p className="eyebrow text-gold-600">Restricted access</p>
               <h2 className="mt-1 font-serif text-xl font-semibold">Sign in to continue</h2>
