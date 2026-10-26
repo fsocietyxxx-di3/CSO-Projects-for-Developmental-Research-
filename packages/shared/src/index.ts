@@ -120,6 +120,44 @@ export const assistanceSchema = z.object({
 });
 export type AssistanceInput = z.infer<typeof assistanceSchema>;
 
+/** POST /assistances body — org pinned server-side for presidents; override is ADMIN-only. */
+export const assistanceRecordSchema = assistanceSchema.extend({
+  organizationId: z.string().uuid().optional(), // required for admins; locked for presidents
+  receivedAt: z.coerce.date().optional(), // defaults to now (back-datable entries)
+  override: z.boolean().optional(), // admins may exceed the allotment ONLY
+});
+export type AssistanceRecordInput = z.infer<typeof assistanceRecordSchema>;
+
+/* --------------------- ledger summaries & batch suggestion ------------------ */
+
+export interface MemberLite {
+  id: string;
+  name: string; // "Last, First"
+  barangay: string;
+}
+
+export interface AllotmentSummary {
+  organizationId: string;
+  organizationName: string;
+  allotment: number;
+  aidedDistinct: number; // different people who ever received
+  entries: number; // raw ledger rows
+  repeats: Array<MemberLite & { times: number }>; // the "Si Eva" flags
+  unused: number; // allotment - aidedDistinct (>= 0 when within cap)
+}
+
+/** GET /assistances/next-eligible — fair-rotation suggestion (tenure-first). */
+export interface NextEligibleMember extends MemberLite {
+  joinedAt: string; // membership joinedAt
+}
+
+export interface NextEligibleResult {
+  organizationId: string;
+  count: number; // suggestions returned
+  totalEligible: number; // pool size (members with zero entries)
+  next: NextEligibleMember[];
+}
+
 /* --------------------------- admin: user accounts -------------------------- */
 /** Presidents cannot self-register — the CSO Desk admin creates their accounts. */
 export const createUserSchema = z.object({

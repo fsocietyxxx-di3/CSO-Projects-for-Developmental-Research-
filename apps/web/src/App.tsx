@@ -11,6 +11,8 @@ import { LoginPage } from "@/pages/LoginPage";
 import { MembersPage } from "@/pages/MembersPage";
 import { MemberEncodePage } from "@/pages/MemberEncodePage";
 import { MemberProfilePage } from "@/pages/MemberProfilePage";
+import { AssistancesPage } from "@/pages/AssistancesPage";
+import { AssistanceRecordPage } from "@/pages/AssistanceRecordPage";
 
 interface Me {
   id: string;
@@ -53,6 +55,7 @@ function Shell({ children }: { children: React.ReactNode }) {
           <nav className="ml-auto flex items-center gap-4 text-sm">
             <Link to="/" className="text-muted-foreground hover:text-foreground">Dashboard</Link>
             <Link to="/members" className="text-muted-foreground hover:text-foreground">Members</Link>
+            <Link to="/assistances" className="text-muted-foreground hover:text-foreground">Ledger</Link>
             <Link to="/organizations" className="text-muted-foreground hover:text-foreground">Organizations</Link>
             <span className="text-muted-foreground">{me?.email}</span>
             <Button variant="ghost" size="icon" title="Sign out" onClick={() => signOut.mutate()}>
@@ -89,6 +92,8 @@ export default function App() {
                 <Route path="members" element={<MembersPage />} />
                 <Route path="members/new" element={<MemberEncodePage />} />
                 <Route path="members/:id" element={<MemberProfilePage />} />
+                <Route path="assistances" element={<AssistancesPage />} />
+                <Route path="assistances/new" element={<AssistanceRecordPage />} />
                 <Route path="organizations" element={<OrganizationsPage />} />
                 <Route path="*" element={<div className="text-muted-foreground">404 — page not found</div>} />
               </Routes>

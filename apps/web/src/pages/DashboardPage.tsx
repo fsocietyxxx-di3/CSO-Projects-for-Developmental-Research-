@@ -83,7 +83,24 @@ export function DashboardPage() {
             (name+birthdate exact match, fuzzy fallback for admin review).
           </p>
         </Link>
-        {MODULES.filter((mod) => !mod.title.startsWith("Member Profiling")).map((m) => (
+        <Link to="/assistances" className="border rounded-lg p-6 hover:bg-muted transition-colors">
+          <HandHeart className="size-5 mb-3" />
+          <div className="flex items-center gap-2">
+            <h2 className="font-medium">Assistance Ledger & Allotments</h2>
+            <span className="rounded-full border px-2 py-0.5 text-xs text-muted-foreground">
+              live — Sprint 3
+            </span>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            The anti-"Si Eva" engine: 30-day window guard, per-NGO allotment caps on
+            distinct people, and the fair next-batch suggestion.
+          </p>
+        </Link>
+        {MODULES.filter(
+          (mod) =>
+            !mod.title.startsWith("Member Profiling") &&
+            !mod.title.startsWith("Assistance Ledger"),
+        ).map((m) => (
           <div key={m.title} className="border rounded-lg p-6 opacity-80">
             <m.icon className="size-5 mb-3" />
             <div className="flex items-center gap-2">
@@ -98,7 +115,7 @@ export function DashboardPage() {
       </div>
 
       <Button variant="outline" disabled>
-        Sprint 3 capabilities appear here next — assistance ledger & per-org allotments.
+        Sprint 4 capabilities appear here next — GAD analytics & PDF/Excel exports.
       </Button>
     </div>
   );

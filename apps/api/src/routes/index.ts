@@ -5,6 +5,7 @@ import { requireAuth } from "../middleware/auth.js";
 import organizationRoutes from "./organizations.js";
 import adminUserRoutes from "./admin-users.js";
 import memberRoutes from "./members.js";
+import assistanceRoutes from "./assistances.js";
 
 const router = Router();
 
@@ -40,5 +41,8 @@ router.use("/admin/users", adminUserRoutes);
 
 /* Sprint 2 module — member profiling + duplicate detection. */
 router.use("/members", memberRoutes);
+
+/* Sprint 3 module — ayuda ledger, allotments, fair-rotation suggestion. */
+router.use("/assistances", assistanceRoutes);
 
 export default router;
