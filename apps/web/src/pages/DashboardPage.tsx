@@ -70,7 +70,20 @@ export function DashboardPage() {
               : "Loading…"}
           </p>
         </Link>
-        {MODULES.map((m) => (
+        <Link to="/members" className="border rounded-lg p-6 hover:bg-muted transition-colors">
+          <ShieldAlert className="size-5 mb-3" />
+          <div className="flex items-center gap-2">
+            <h2 className="font-medium">Member Profiling & Duplicate Detection</h2>
+            <span className="rounded-full border px-2 py-0.5 text-xs text-muted-foreground">
+              live — Sprint 2
+            </span>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Encode members once — the system flags anyone already in another org
+            (name+birthdate exact match, fuzzy fallback for admin review).
+          </p>
+        </Link>
+        {MODULES.filter((mod) => !mod.title.startsWith("Member Profiling")).map((m) => (
           <div key={m.title} className="border rounded-lg p-6 opacity-80">
             <m.icon className="size-5 mb-3" />
             <div className="flex items-center gap-2">
@@ -85,7 +98,7 @@ export function DashboardPage() {
       </div>
 
       <Button variant="outline" disabled>
-        Sprint 2 capabilities appear here next — member encoding with duplicate flags.
+        Sprint 3 capabilities appear here next — assistance ledger & per-org allotments.
       </Button>
     </div>
   );

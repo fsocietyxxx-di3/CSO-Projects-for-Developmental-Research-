@@ -4,6 +4,7 @@ import { prisma } from "../lib/prisma.js";
 import { requireAuth } from "../middleware/auth.js";
 import organizationRoutes from "./organizations.js";
 import adminUserRoutes from "./admin-users.js";
+import memberRoutes from "./members.js";
 
 const router = Router();
 
@@ -36,5 +37,8 @@ router.use("/organizations", organizationRoutes);
 
 /* Sprint 1 module — CSO Desk admin provisions president accounts. */
 router.use("/admin/users", adminUserRoutes);
+
+/* Sprint 2 module — member profiling + duplicate detection. */
+router.use("/members", memberRoutes);
 
 export default router;

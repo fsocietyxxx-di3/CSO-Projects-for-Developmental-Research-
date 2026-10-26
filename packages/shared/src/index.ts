@@ -35,6 +35,19 @@ export const memberInputSchema = z.object({
 });
 export type MemberInput = z.infer<typeof memberInputSchema>;
 
+/**
+ * Enroll body — two paths:
+ *  1. NEW person: all memberInputSchema fields, no existingMemberId.
+ *  2. SAME person in a second org: pass existingMemberId from the duplicate panel;
+ *     API verifies the exact match (name+birthdate) before creating ONLY a new Membership.
+ */
+export const memberEnrollSchema = memberInputSchema.extend({
+  existingMemberId: z.string().uuid().optional(),
+  /** Admin encodes into a chosen org; presidents are locked to their own. */
+  organizationId: z.string().uuid().optional(),
+});
+export type MemberEnrollInput = z.infer<typeof memberEnrollSchema>;
+
 /** Payload sent to the duplicate-check endpoint before a member is saved. */
 export const duplicateCheckInputSchema = memberInputSchema.pick({
   firstName: true,
